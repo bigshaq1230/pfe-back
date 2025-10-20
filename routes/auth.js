@@ -35,7 +35,7 @@ router.post('/register', auth, authorize('admin'), async (req, res) => {
     }
 
     // Check matricule uniqueness if provided
-    if (matricule) {
+    if (id) {
       const existingMatricule = await User.findOne({ where: { matricule } });
       if (existingMatricule) {
         return res.status(400).json({
