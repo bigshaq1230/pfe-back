@@ -1,34 +1,60 @@
-import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
-dotenv.config();
+const { ExistDB } = require('existdb');
 
+class ExistDBClient {
+  constructor() {
+    this.client = new ExistDB({
+      baseURL: process.env.EXIST_DB_URL || 'http://localhost:8080/exist',
+      username: process.env.EXIST_DB_USER || 'admin',
+      password: process.env.EXIST_DB_PASS || 'admin'
+    });
+  }
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'waste_management',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASSWORD || 'password',
-  {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
+  async connect() {
+    try {
+      await this.client.connect();
+      console.log('✅ Connecté à eXist-DB');
+      return true;
+    } catch (error) {
+      console.error('❌ Erreur de connexion à eXist-DB:', error);
+      return false;
     }
   }
-);
 
-// Test database connection
-const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ PostgreSQL connection established successfully.');
-  } catch (error) {
-    console.error('❌ Unable to connect to PostgreSQL:', error);
+  async storeXML(collection, documentName, xmlContent) {
+    try {
+      const result = await this.client.storeDocument(
+        `/db/smart-waste/${collection}`,
+        documentName,
+        xmlContent
+      );
+      return result;
+    } catch (error) {
+      console.error('Erreur lors du stockage XML:', error);
+      throw error;
+    }
   }
-};
 
-export { sequelize, testConnection };
+  async getXML(collection, documentName) {
+    try {
+      const result = await this.client.getDocument(
+        `/db/smart-waste/${collection}/${documentName}`
+      );
+      return result;
+    } catch (error) {
+      console.error('Erreur lors de la récupération XML:', error);
+      throw error;
+    }
+  }
+
+  async queryXPath(xpathQuery) {
+    try {
+      const result = await this.client.executeXPath(xpathQuery);
+      return result;
+    } catch (error) {
+      console.error('Erreur lors de la requête XPath:', error);
+      throw error;
+    }
+  }
+}
+
+module.exports = new ExistDBClient();

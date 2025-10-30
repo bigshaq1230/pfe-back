@@ -1,247 +1,164 @@
-import express from 'express';
-import { User } from '../models/index.js';
-import { auth, authorize, generateToken } from '../middleware/auth.js';
+import { Router } from 'express';
+import { hash, compare } from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+const { verify, sign } = jwt;
+import { v4 as uuidv4 } from 'uuid';
+const router = Router();
 
-const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// @desc    Register new user
-// @route   POST /api/auth/register
-// @access  Private/Admin
-router.post('/register', auth, authorize('admin'), async (req, res) => {
+// Simulation de base de données utilisateurs (à remplacer par eXist-DB)
+let users = [
+  {
+    id: '1',
+    nom: 'Admin',
+    email: 'admin@smartwaste.com',
+    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
+    role: 'admin',
+    dateCreation: '2024-01-01'
+  }
+];
+
+// Middleware d'authentification
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Token d\'accès requis' });
+  }
+
+  verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ success: false, error: 'Token invalide' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Inscription
+router.post('/register', async (req, res) => {
   try {
-    const {
-      id,
-      email,
-      password,
-      nom,
-      prenom,
-      telephone,
-      role,
-      competences,
-    } = req.body;
+    const { nom, email, password, role = 'employe' } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({
-      where: {
-        email: email.toLowerCase()
-      }
-    });
-
+    // Vérifier si l'utilisateur existe déjà
+    const existingUser = users.find(user => user.email === email);
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Un utilisateur avec cet email existe déjà.'
+        error: 'Un utilisateur avec cet email existe déjà'
       });
     }
 
-    // Check matricule uniqueness if provided
-    if (id) {
-      const existingMatricule = await User.findOne({ where: { matricule } });
-      if (existingMatricule) {
-        return res.status(400).json({
-          success: false,
-          message: 'Ce matricule est déjà utilisé.'
-        });
-      }
-    }
+    // Hacher le mot de passe
+    const hashedPassword = await hash(password, 10);
 
-    const user = await User.create({
-      id,
-      email: email.toLowerCase(),
-      password,
+    // Créer l'utilisateur
+    const newUser = {
+      id: uuidv4(),
       nom,
-      prenom,
-      telephone,
+      email,
+      password: hashedPassword,
       role,
-      competences: competences || []
-    });
+      dateCreation: new Date().toISOString()
+    };
 
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
+    users.push(newUser);
+
+    // Générer le token JWT
+    const token = sign(
+      { id: newUser.id, email: newUser.email, role: newUser.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
     res.status(201).json({
       success: true,
-      message: 'Utilisateur créé avec succès',
       data: {
-        user,
+        user: {
+          id: newUser.id,
+          nom: newUser.nom,
+          email: newUser.email,
+          role: newUser.role
+        },
         token
       }
     });
+
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Erreur lors de la création de l\'utilisateur'
-    });
+    console.error('Erreur inscription:', error);
+    res.status(500).json({ success: false, error: 'Erreur lors de l\'inscription' });
   }
 });
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
+// Connexion
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Veuillez fournir un email et un mot de passe.'
-      });
-    }
-
-    // Find user
-    const user = await User.findOne({
-      where: {
-        email: email.toLowerCase(),
-        estActif: true
-      }
-    });
-
+    // Trouver l'utilisateur
+    const user = users.find(u => u.email === email);
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Email ou mot de passe incorrect.'
+        error: 'Email ou mot de passe incorrect'
       });
     }
 
-    // Check password
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
+    // Vérifier le mot de passe
+    const validPassword = await compare(password, user.password);
+    if (!validPassword) {
       return res.status(401).json({
         success: false,
-        message: 'Email ou mot de passe incorrect.'
+        error: 'Email ou mot de passe incorrect'
       });
     }
 
-    // Update last access
-    user.dernierAcces = new Date();
-    await user.save();
-
-    // Generate token
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
+    // Générer le token JWT
+    const token = sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
     res.json({
       success: true,
-      message: 'Connexion réussie',
       data: {
-        user,
+        user: {
+          id: user.id,
+          nom: user.nom,
+          email: user.email,
+          role: user.role
+        },
         token
       }
     });
+
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur interne du serveur'
-    });
+    console.error('Erreur connexion:', error);
+    res.status(500).json({ success: false, error: 'Erreur lors de la connexion' });
   }
 });
 
-// @desc    Get current user profile
-// @route   GET /api/auth/profile
-// @access  Private
-router.get('/profile', auth, async (req, res) => {
+// Profil utilisateur
+router.get('/profile', authenticateToken, (req, res) => {
+  const user = users.find(u => u.id === req.user.id);
+  if (!user) {
+    return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
+  }
+
   res.json({
     success: true,
-    data: req.user
+    data: {
+      user: {
+        id: user.id,
+        nom: user.nom,
+        email: user.email,
+        role: user.role
+      }
+    }
   });
 });
 
-// @desc    Update user profile
-// @route   PUT /api/auth/profile
-// @access  Private
-router.put('/profile', auth, async (req, res) => {
-  try {
-    const allowedUpdates = ['nom', 'prenom', 'telephone'];
-    const updates = {};
-
-    Object.keys(req.body).forEach(key => {
-      if (allowedUpdates.includes(key)) {
-        updates[key] = req.body[key];
-      }
-    });
-
-    await req.user.update(updates);
-
-    res.json({
-      success: true,
-      message: 'Profil mis à jour avec succès',
-      data: req.user
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// @desc    Get all users (Admin only)
-// @route   GET /api/auth/users
-// @access  Private/Admin
-router.get('/users', auth, authorize('admin'), async (req, res) => {
-  try {
-    const users = await User.findAll({
-      attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']]
-    });
-
-    res.json({
-      success: true,
-      data: users
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// @desc    Update user (Admin only)
-// @route   PUT /api/auth/users/:id
-// @access  Private/Admin
-router.put('/users/:id', auth, authorize('admin'), async (req, res) => {
-  try {
-    const user = await User.findByPk(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé.'
-      });
-    }
-
-    const { password, ...updates } = req.body;
-
-    // Handle password update separately
-    if (password) {
-      user.password = password;
-      await user.save();
-    }
-
-    await user.update(updates);
-
-    res.json({
-      success: true,
-      message: 'Utilisateur mis à jour avec succès',
-      data: user
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-export default router;
+export  { router, authenticateToken };

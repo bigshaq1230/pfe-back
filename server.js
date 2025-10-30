@@ -1,77 +1,57 @@
-import express from 'express'
-import cors from 'cors'
-import dotenv from 'dotenv';
-dotenv.config()
+import express from 'express';
+import cors from 'cors';
+import { v4 as uuidv4 } from 'uuid';
 
-// Import database and models
-import { testConnection, syncDatabase, User } from './models/index.js';
-import authRoutes from './routes/auth.js';
+// Import des routes
+import pointsCollecteRoutes from './routes/pointsCollecte.js';
+import vehiculesRoutes from './routes/vehicules.js';
+import employesRoutes from './routes/employes.js';
+import { router as authRoutes, authenticateToken } from './routes/auth.js';
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// Routes publiques
 app.use('/api/auth', authRoutes);
 
-// Health check route
-app.get('/api/health', (req, res) => {
+// Routes protégées
+app.use('/api/points-collecte', authenticateToken, pointsCollecteRoutes);
+app.use('/api/vehicules', authenticateToken, vehiculesRoutes);
+app.use('/api/employes', authenticateToken, employesRoutes);
+
+// Route de base
+app.get('/', (req, res) => {
   res.json({
-    success: true,
-    message: 'Waste Management API is running',
-    timestamp: new Date().toISOString()
+    message: 'Système Intelligent de Gestion des Déchets Urbains',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      pointsCollecte: '/api/points-collecte',
+      vehicules: '/api/vehicules',
+      employes: '/api/employes',
+    }
   });
 });
 
-// Error handling middleware
-app.use((error, req, res, next) => {
-  console.error('Error:', error);
-  res.status(500).json({
-    success: false,
-    message: 'Erreur interne du serveur'
-  });
+// Gestion des erreurs
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Erreur interne du serveur' });
 });
 
-// 404 handler
-/*app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route non trouvée'
-  });
+// Route 404
+// Use a path-less middleware so express doesn't pass the path through path-to-regexp
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route non trouvée' });
 });
-*/
-const PORT = process.env.PORT || 3000;
 
-// Initialize database and start server
-const startServer = async () => {
-  try {
-    console.log('🔄 Testing database connection...');
-
-    // Test database connection
-    await testConnection();
-
-    console.log('🔄 Syncing database...');
-    // Sync database (set force: true only in development to reset tables)
-    await syncDatabase();
-
-    console.log('🔄 Creating default admin user...');
-    // Create default admin user if doesn't exist
-
-    app.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-      console.log(`🚀 API available at: http://localhost:${PORT}/api`);
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
-};
-
-// Create default admin user
-
-
-// Start the server
-startServer();
+app.listen(PORT, () => {
+  console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+  console.log(`📊 Système de gestion des déchets urbains`);
+  console.log(`📍 API disponible sur: http://localhost:${PORT}`);
+});
