@@ -1,16 +1,18 @@
 import express from 'express';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
-
 // Import des routes
 import pointsCollecteRoutes from './routes/pointsCollecte.js';
 import vehiculesRoutes from './routes/vehicules.js';
 import employesRoutes from './routes/employes.js';
 import { router as authRoutes, authenticateToken } from './routes/auth.js';
+import database from './config/database.js';
+
+
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 // Middleware
 app.use(cors());
 app.use(express.json());

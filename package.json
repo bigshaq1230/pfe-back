@@ -10,10 +10,12 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@existdb/node-exist": "^5.5.2",
     "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "existdb": "^0.0.1-security",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "libxmljs": "^1.0.11",

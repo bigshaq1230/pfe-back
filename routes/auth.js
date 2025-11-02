@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 const { verify, sign } = jwt;
 import { v4 as uuidv4 } from 'uuid';
 const router = Router();
-
+import db from '../config/database';
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Simulation de base de données utilisateurs (à remplacer par eXist-DB)
@@ -13,7 +13,7 @@ let users = [
     id: '1',
     nom: 'Admin',
     email: 'admin@smartwaste.com',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
+    password: '$2b$10$V7A8Kd26QGWDNpdc.H5qlup0/0cuF9vZ6ZwqY4j38VKxZLz03/1gK', // password:123
     role: 'admin',
     dateCreation: '2024-01-01'
   }
@@ -40,8 +40,7 @@ const authenticateToken = (req, res, next) => {
 // Inscription
 router.post('/register', async (req, res) => {
   try {
-    const { nom, email, password, role = 'employe' } = req.body;
-
+    const { id,nom, email, password, role = 'civilian' } = req.body;
     // Vérifier si l'utilisateur existe déjà
     const existingUser = users.find(user => user.email === email);
     if (existingUser) {
@@ -56,7 +55,7 @@ router.post('/register', async (req, res) => {
 
     // Créer l'utilisateur
     const newUser = {
-      id: uuidv4(),
+      id,
       nom,
       email,
       password: hashedPassword,

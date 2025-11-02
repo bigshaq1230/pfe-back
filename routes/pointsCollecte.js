@@ -6,8 +6,6 @@ import { v4 as uuidv4 } from 'uuid';
 let pointsCollecte = [
   {
     id: '1',
-    nom: 'Point Centre-Ville',
-    typeDechet: 'plastique',
     localisation: { lat: 36.8065, lng: 10.1815 },
     niveauRemplissage: 75,
     capaciteMax: 1000,
@@ -16,8 +14,6 @@ let pointsCollecte = [
   },
   {
     id: '2',
-    nom: 'Point Commercial',
-    typeDechet: 'organique',
     localisation: { lat: 36.8080, lng: 10.1830 },
     niveauRemplissage: 30,
     capaciteMax: 800,

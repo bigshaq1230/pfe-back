@@ -5,8 +5,7 @@ const router = Router();
 // Données temporaires des employés (à remplacer par eXist-DB)
 let employes = [
   {
-    id: '1',
-    matricule: 'EMP001',
+    id: '101251',
     nom: 'Ben Ali',
     prenom: 'Mohamed',
     email: 'mohamed.benali@smartwaste.com',
@@ -23,8 +22,7 @@ let employes = [
     dateModification: '2024-01-15T10:00:00Z'
   },
   {
-    id: '2',
-    matricule: 'EMP002',
+    id: '651206',
     nom: 'Trabelsi',
     prenom: 'Fatma',
     email: 'fatma.trabelsi@smartwaste.com',
@@ -41,8 +39,7 @@ let employes = [
     dateModification: '2024-01-15T10:00:00Z'
   },
   {
-    id: '3',
-    matricule: 'EMP003',
+    id: '651652965',
     nom: 'Karray',
     prenom: 'Ali',
     email: 'ali.karray@smartwaste.com',
